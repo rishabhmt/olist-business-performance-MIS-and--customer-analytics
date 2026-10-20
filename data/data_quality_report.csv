@@ -1,0 +1,20 @@
+check_id,table,column_or_rule,issue_detected,affected_records,severity,recommended_action,validation_status
+DQ-ORD-01,orders,order_id,Duplicate primary key (order_id),0,INFO,None; PK is strictly unique,PASSED
+DQ-ORD-02,orders,customer_id,Missing foreign key customer_id,0,INFO,Investigate transaction logs; quarantine orders without customer,PASSED
+DQ-ORD-03,orders,order_delivered_customer_date,Delivered orders lacking actual delivery timestamp,8,HIGH,Exclude from delivery duration calculations; retain in order count,WARNING
+DQ-ORD-04,orders,order_purchase_timestamp vs order_delivered_customer_date,Delivery date precedes purchase date (temporal inconsistency),0,INFO,Flag as temporal anomaly; set delivery duration to NULL,PASSED
+DQ-ORD-05,orders,order_status,Non-standard categorical order status values,0,INFO,Map to standard lifecycle taxonomy,PASSED
+DQ-ITM-01,order_items,order_id + order_item_id,Duplicate line item key within order,0,INFO,Verify item sequences; deduplicate identical lines,PASSED
+DQ-ITM-02,order_items,price,Zero or negative item price,0,INFO,Audit for promotional/free giveaway items vs pricing errors,PASSED
+DQ-ITM-03,order_items,freight_value,Negative shipping cost,0,INFO,Correct negative values to 0.00,PASSED
+DQ-ITM-04,order_items,order_id -> orders.order_id,Orphan line items referencing non-existent order header,0,INFO,Quarantine orphan items; investigate missing parent orders,PASSED
+DQ-PAY-01,order_payments,payment_value,Zero or negative payment transaction amounts,9,MEDIUM,Retain zero-value transactions if full voucher/credit coverage,WARNING
+DQ-PAY-02,order_payments,payment_installments,Negative installment counts,0,INFO,Flag data entry error; set to 1 minimum,PASSED
+DQ-REV-01,order_reviews,review_score,Out-of-range customer satisfaction score,0,INFO,Cap bounds or investigate rating scale corruption,PASSED
+DQ-REV-02,order_reviews,review_id + order_id,Duplicate review feedback on identical order,0,INFO,Retain most recent review response timestamp,PASSED
+DQ-CST-01,customers,customer_id,Duplicate customer order session token,0,INFO,Ensure customer_id remains unique per transaction,PASSED
+DQ-CST-02,customers,customer_unique_id,"Granularity distinction: 99,441 sessions vs 96,096 unique buyers (2,997 repeat buyers)",3345,INFO,MUST use customer_unique_id for all retention and RFM metrics,PASSED
+DQ-PRD-01,products,product_category_name,Missing Portuguese category name,610,LOW,Impute 'unassigned' category in staging without dropping product,WARNING
+DQ-PRD-02,products,product_id,Duplicate product identifier,0,INFO,Enforce strict uniqueness on dim_product PK,PASSED
+DQ-SEL-01,sellers,seller_id,Duplicate seller identifier,0,INFO,Ensure seller_id is unique across seller directory,PASSED
+DQ-GEO-01,geolocation,geolocation_zip_code_prefix,"High cardinality duplication: 1,000,163 total records for 19,015 unique zip code prefixes",981148,MEDIUM,Aggregate spatial coordinates to average lat/long per zip code prefix before dimensional modeling,WARNING
