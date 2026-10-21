@@ -29,7 +29,7 @@
 
 ## Executive Dashboard Showcase
 
-The Power BI report ([`Olist.pbix`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/Olist.pbix)) serves as the executive intelligence interface, presenting 5 purpose-built operational pages:
+The Power BI report ([`power_bi/Olist.pbix`](power_bi/Olist.pbix)) serves as the executive intelligence interface, presenting 5 purpose-built operational pages:
 
 ### Page 1: Executive Overview
 ![Executive Overview](docs/images/dashboard-overview.png)
@@ -92,7 +92,12 @@ flowchart LR
 
 To eliminate **revenue multiplication from joins**, transactions are partitioned at their natural grain with strict foreign key constraints:
 
-```mermaid
+![Olist Star Schema Database ER Diagram](docs/images/database-er-diagram.png)
+
+<details>
+<summary><b>Click to expand raw Mermaid ER source code</b> (or inspect <a href="docs/er_diagram.mmd"><code>docs/er_diagram.mmd</code></a>)</summary>
+
+```text
 erDiagram
     dim_customer ||--o{ fact_orders : "places"
     dim_customer ||--o{ fact_order_items : "belongs_to"
@@ -165,6 +170,8 @@ erDiagram
     }
 ```
 
+</details>
+
 ### Financial Reconciliation & Integrity Proof:
 - **Canonical Line-Item Revenue:** `$15,848,243.14` (`SUM(fact_order_items.line_total)`)
 - **Aggregated Order Revenue:** `$15,848,243.14` (`SUM(fact_orders.total_order_value)`)
@@ -173,17 +180,74 @@ erDiagram
 
 ---
 
+## Governed Zero-Trust AI Analytics Engine
+
+To allow executive leadership and operational teams to query the data warehouse via natural language, the platform features a **Governed Zero-Trust AI Analytics Engine** ([`ai_analytics/`](ai_analytics/)). This layer decouples the user from raw database schemas and intercepts LLM-generated SQL before execution, enforcing mathematical guardrails, query bounds, and strict security isolation.
+
+```text
+┌────────────────────────┐      ┌────────────────────────┐      ┌────────────────────────┐
+│  Executive Natural     │      │   LLM SQL Generator    │      │  SQL AST Validator     │
+│  Language Question     │ ───► │  (Gemini / Claude /    │ ───► │  (Zero-Trust AST &     │
+│  "What is our GMV?")   │      │   OpenAI Agent)        │      │   Whitelist Guardrail) │
+└────────────────────────┘      └────────────────────────┘      └───────────┬────────────┘
+                                                                            │
+                          ┌─────────────────────────────────────────────────┴──────────────────┐
+                          ▼                                                                    ▼
+             ┌─────────────────────────┐                                          ┌─────────────────────────┐
+             │     REJECT / BLOCK      │                                          │      AUTHORIZE & EXEC   │
+             │  • DDL / DML attacks    │                                          │  • Read-only SELECT     │
+             │  • Multi-statements (;) │                                          │  • Whitelisted vw_*     │
+             │  • Catalog snooping     │                                          │  • Max 100 rows limit   │
+             │  • Raw / staging access │                                          │  • 5000ms query timeout │
+             └─────────────────────────┘                                          └───────────┬─────────────┘
+                                                                                              │
+                                                                                              ▼
+                                                                                  ┌─────────────────────────┐
+                                                                                  │  PostgreSQL Warehouse   │
+                                                                                  │  (Governed KPI Views)   │
+                                                                                  └─────────────────────────┘
+```
+
+### 1. Abstract Syntax Tree (AST) Security Guardrails (`ai_analytics/sql_validator.py`)
+- **Single-Statement Enforcement:** Deconstructs query syntax trees using `sqlparse`. Strictly allows exactly **one** statement per request—instantly defeating stacked-query SQL injection attacks (`SELECT ...; DROP TABLE ...;`).
+- **Read-Only DDL/DML Lockdown:** Authorizes only pure `SELECT` operations. Hard-rejects any statement containing `DROP`, `DELETE`, `UPDATE`, `INSERT`, `ALTER`, `TRUNCATE`, `GRANT`, `REVOKE`, `COPY`, or `EXECUTE`.
+- **System Catalog & Raw Schema Cloaking:** Explicitly forbids access to PostgreSQL internal catalogs (`pg_catalog`, `information_schema`) and ingestion/staging schemas (`raw_olist`, `staging`), completely eliminating schema-snooping or credential exfiltration risks.
+- **Resource & Performance Clamping:** Automatically enforces a maximum result cap of **100 rows** (injecting or clamping `LIMIT 100`), applies a session-level timeout of **5,000 ms**, and activates `SET default_transaction_read_only = TRUE`.
+- **Comment Injection Filtering:** Blocks inline comments (`--`, `/* */`) commonly leveraged to bypass token sanitization, and prohibits denial-of-service primitives like `pg_sleep()`.
+
+### 2. Schema Sandboxing & Whitelisted Views Catalog (`ai_analytics/schema_context.md`)
+The AI agent is barred from querying physical dimension/fact tables (`dim_*`, `fact_*`) or staging tables to prevent inadvertent cross-join fan-outs. Queries are restricted solely to 6 governed analytical views:
+
+| Authorized Analytical View | Grain & Purpose | Key Exposed Metrics |
+|---|---|---|
+| `analytics.vw_executive_kpis` | 1-Row Snapshot | Gross GMV ($15.84M), merchandise vs. freight, fulfillment rate (97.02%), AOV ($159.33), on-time % (91.89%). |
+| `analytics.vw_monthly_sales_performance` | 25 Operational Months | Historical GMV trajectory, MoM growth %, seasonal delivery pace. |
+| `analytics.vw_category_performance` | 73 Product Categories | Category revenue, item volume, price elasticity, GMV share %. |
+| `analytics.vw_customer_rfm_segments` | 96,096 Unique Buyers | 7 RFM behavioral tiers, recency, order frequency, customer spend. |
+| `analytics.vw_delivery_logistics_performance` | 27 Brazilian States | State transit lead times, on-time fulfillment %, late rates, freight fees. |
+| `analytics.vw_seller_performance` | 3,095 Merchant Sellers | Merchant revenue concentration, unit volume, market revenue share. |
+
+### 3. Adversarial Security & Natural Language Benchmark (`ai_analytics/evaluation_questions.csv`)
+The engine is continuously verified against a comprehensive 35-scenario evaluation suite:
+- **25 Enterprise Business Scenarios:** Validates that complex multi-metric executive inquiries return accurate, fan-out-free business answers.
+- **10 Adversarial Attack Vectors:** Demonstrates 100% rejection across DDL drops, DML updates, comment injections, sleep attacks, system catalog credential harvesting, and unapproved schema tampering.
+- **Automated CI/CD Validation:** Verified by 11 unit tests in [`tests/test_sql_validation.py`](tests/test_sql_validation.py).
+
+---
+
 ## Key Portfolio Deliverables
 
 | Deliverable Area | Asset Path | Description |
 |---|---|---|
-| **Executive Power BI Dashboard** | [`Olist.pbix`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/Olist.pbix) | Authentic 5-page dashboard preserved 100% unaltered (SHA-256 verified). |
-| **Excel MIS Workbook** | [`excel_mis/management_reporting.xlsx`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/excel_mis/management_reporting.xlsx) | 7 manager-ready sheets with dynamic KPI cards, MoM formulas, and reconciliation tabs. |
-| **Governed SQL Views** | [`sql/05_kpi_views.sql`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/sql/05_kpi_views.sql) | Reusable PostgreSQL views powering Executive, Monthly, Category, RFM, and Logistics reporting. |
-| **Automated Data Quality Audit** | [`data/data_quality_report.csv`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/data/data_quality_report.csv) | 19 automated profiling checks logging nulls, duplicates, and key integrity. |
-| **Governed AI Analytics Engine** | [`ai_analytics/sql_validator.py`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/ai_analytics/sql_validator.py) | Zero-trust SQL AST validator enforcing read-only access and blocking DDL/DML attacks. |
-| **Automated Test Suite** | [`tests/`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/tests/) | 21 passing automated pytest tests validating warehouse math and security guardrails. |
-| **Enterprise Documentation** | [`documentation/`](file:///c:/Users/lenovo/Desktop/olist-powerbi-dashboard-main/documentation/) | Complete Data Dictionary, KPI Dictionary, Architecture Design, and Audit Reports. |
+| **Executive Power BI Dashboard** | [`power_bi/Olist.pbix`](power_bi/Olist.pbix) | Authentic 5-page dashboard preserved 100% unaltered (SHA-256 verified). |
+| **Excel MIS Workbook** | [`excel_mis/management_reporting.xlsx`](excel_mis/management_reporting.xlsx) | 7 manager-ready sheets with dynamic KPI cards, MoM formulas, and reconciliation tabs. |
+| **Governed SQL Views** | [`sql/05_kpi_views.sql`](sql/05_kpi_views.sql) | Reusable PostgreSQL views powering Executive, Monthly, Category, RFM, and Logistics reporting. |
+| **Automated Data Quality Audit** | [`data/data_quality_report.csv`](data/data_quality_report.csv) | 19 automated profiling checks logging nulls, duplicates, and key integrity. |
+| **Governed AI Analytics Engine** | [`ai_analytics/sql_validator.py`](ai_analytics/sql_validator.py) | Zero-trust SQL AST validator enforcing read-only access and blocking DDL/DML attacks. |
+| **AI Evaluation Benchmark** | [`ai_analytics/evaluation_questions.csv`](ai_analytics/evaluation_questions.csv) | 35 enterprise natural language scenarios and adversarial penetration test cases. |
+| **Star Schema ER Architecture** | [`docs/er_diagram.mmd`](docs/er_diagram.mmd) | Complete ER diagram specification for PostgreSQL dimensional model. |
+| **Automated Test Suite** | [`tests/`](tests/) | Passing automated pytest tests validating warehouse math and security guardrails. |
+| **Enterprise Documentation** | [`docs/`](docs/) | Complete KPI Dictionary, Architecture Design, and Audit Reports. |
 
 ---
 
@@ -219,7 +283,9 @@ python python/data_quality.py
 python python/reconciliation.py
 python excel_mis/generate_mis_workbook.py
 
-# 5. Execute 21-test automated verification suite
+# 5. Test Governed AI AST validator & test suite
+python ai_analytics/sql_validator.py
+python -m pytest -v tests/test_sql_validation.py
 python -m pytest -v tests
 ```
 

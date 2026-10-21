@@ -1,0 +1,70 @@
+erDiagram
+    dim_customer ||--o{ fact_orders : "places"
+    dim_customer ||--o{ fact_order_items : "belongs_to"
+    dim_date ||--o{ fact_orders : "purchased_on / delivered_on"
+    fact_orders ||--o{ fact_order_items : "contains"
+    fact_orders ||--o{ fact_order_payments : "paid_by"
+    fact_orders ||--o{ fact_order_reviews : "reviewed_by"
+    dim_product ||--o{ fact_order_items : "sold_in"
+    dim_seller ||--o{ fact_order_items : "fulfilled_by"
+
+    dim_customer {
+        string customer_key PK
+        string customer_id "UK"
+        string customer_unique_id
+        string customer_state
+        string customer_city
+    }
+
+    dim_product {
+        string product_key PK
+        string product_id "UK"
+        string product_category_name_english
+        numeric product_weight_g
+    }
+
+    dim_seller {
+        string seller_key PK
+        string seller_id "UK"
+        string seller_state
+    }
+
+    dim_date {
+        date date_key PK
+        int year
+        int month
+        string month_name
+    }
+
+    fact_orders {
+        string order_id PK
+        string customer_id FK
+        string order_status
+        timestamp order_purchase_timestamp
+        int delivery_days
+        boolean is_delivered_on_time
+        numeric total_order_value
+    }
+
+    fact_order_items {
+        string order_item_key PK
+        string order_id FK
+        string product_id FK
+        string seller_id FK
+        numeric price
+        numeric freight_value
+        numeric line_total
+    }
+
+    fact_order_payments {
+        string payment_key PK
+        string order_id FK
+        string payment_type
+        numeric payment_value
+    }
+
+    fact_order_reviews {
+        string review_key PK
+        string order_id FK
+        int review_score
+    }
