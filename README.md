@@ -76,14 +76,14 @@ The Power BI report ([`Olist.pbix`](file:///c:/Users/lenovo/Desktop/olist-powerb
 
 ```mermaid
 flowchart LR
-    A["Raw Olist CSVs\n(9 Datasets)"] --> B["PostgreSQL Ingestion\n(raw_olist schema)"]
-    B --> C["Python Profiling & DQ\n(19 Automated Checks)"]
-    C --> D["Staging Layer\n(Deduplicated & Cleaned)"]
-    D --> E["PostgreSQL Star Schema\n(4 Facts, 4 Dimensions)"]
-    E --> F["Governed SQL Views\n(Single Source of Truth)"]
-    F --> G["Power BI Dashboard\n(Preserved Unchanged)"]
-    F --> H["Excel MIS Workbook\n(7 Management Tabs)"]
-    F --> I["Governed AI Analytics\n(AST Guardrails)"]
+    A["Raw Olist CSVs<br/>(9 Datasets)"] --> B["PostgreSQL Ingestion<br/>(raw_olist schema)"]
+    B --> C["Python Profiling & DQ<br/>(19 Automated Checks)"]
+    C --> D["Staging Layer<br/>(Deduplicated & Cleaned)"]
+    D --> E["PostgreSQL Star Schema<br/>(4 Facts, 4 Dimensions)"]
+    E --> F["Governed SQL Views<br/>(Single Source of Truth)"]
+    F --> G["Power BI Dashboard<br/>(Preserved Unchanged)"]
+    F --> H["Excel MIS Workbook<br/>(7 Management Tabs)"]
+    F --> I["Governed AI Analytics<br/>(AST Guardrails)"]
 ```
 
 ---
@@ -94,19 +94,18 @@ To eliminate **revenue multiplication from joins**, transactions are partitioned
 
 ```mermaid
 erDiagram
-    dim_customer ||--o{ fact_orders : places
-    dim_customer ||--o{ fact_order_items : belongs_to
-    dim_date ||--o{ fact_orders : purchased_on
-    dim_date ||--o{ fact_orders : delivered_on
-    fact_orders ||--o{ fact_order_items : contains
-    fact_orders ||--o{ fact_order_payments : paid_by
-    fact_orders ||--o{ fact_order_reviews : reviewed_by
-    dim_product ||--o{ fact_order_items : sold_in
-    dim_seller ||--o{ fact_order_items : fulfilled_by
+    dim_customer ||--o{ fact_orders : "places"
+    dim_customer ||--o{ fact_order_items : "belongs_to"
+    dim_date ||--o{ fact_orders : "purchased_on / delivered_on"
+    fact_orders ||--o{ fact_order_items : "contains"
+    fact_orders ||--o{ fact_order_payments : "paid_by"
+    fact_orders ||--o{ fact_order_reviews : "reviewed_by"
+    dim_product ||--o{ fact_order_items : "sold_in"
+    dim_seller ||--o{ fact_order_items : "fulfilled_by"
 
     dim_customer {
         string customer_key PK
-        string customer_id UK
+        string customer_id "UK"
         string customer_unique_id
         string customer_state
         string customer_city
@@ -114,14 +113,14 @@ erDiagram
 
     dim_product {
         string product_key PK
-        string product_id UK
+        string product_id "UK"
         string product_category_name_english
         numeric product_weight_g
     }
 
     dim_seller {
         string seller_key PK
-        string seller_id UK
+        string seller_id "UK"
         string seller_state
     }
 
